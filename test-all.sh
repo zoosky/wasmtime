@@ -37,19 +37,19 @@ fi
 
 # Make sure the code builds in release mode.
 banner "Rust release build"
-cargo build --release
+#cargo build --release
 
 # Make sure the code builds in debug mode.
 banner "Rust debug build"
-cargo build
+#cargo build
 
 # Run the tests. We run these in debug mode so that assertions are enabled.
 banner "Rust unit tests"
-RUST_BACKTRACE=1 cargo test --all
+RUST_BACKTRACE=1 cargo test -- --nocapture --test-threads=1
 
 # Make sure the documentation builds.
 banner "Rust documentation: $topdir/target/doc/wasmtime/index.html"
-cargo doc
+#cargo doc
 
 # Ensure fuzzer works by running it with a single input
 # Note LSAN is disabled due to https://github.com/google/sanitizers/issues/764

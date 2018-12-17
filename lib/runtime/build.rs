@@ -17,7 +17,10 @@ fn main() {
         .header("signalhandlers/SignalHandlers.h")
         .whitelist_type("TrapContext")
         .whitelist_type("jmp_buf")
-        .whitelist_function("EnsureEagerSignalHandlers");
+        .whitelist_function("EnsureEagerSignalHandlers")
+        .whitelist_function("CallTrampoline")
+        .whitelist_function("Call")
+        .whitelist_function("SetLastKnownUsableSP");
 
     // If we're compiling for Darwin, compile in extra Darwin support routines.
     if Regex::new(r"-darwin[[:digit:].]*$")

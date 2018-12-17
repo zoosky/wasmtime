@@ -253,6 +253,7 @@ impl WastContext {
     ) -> Result<(), WastFileError> {
         let mut parser = ScriptParser::from_str(str::from_utf8(wast).unwrap()).unwrap();
 
+        println!("---- File {} -------", filename);
         while let Some(Command { kind, line }) = parser.next().expect("parser") {
             match kind {
                 CommandKind::Module { module, name } => {
@@ -351,6 +352,7 @@ impl WastContext {
                     }
                 }
                 CommandKind::AssertExhaustion { action } => {
+                    #[cfg(not(target_os = "windows"))]
                     match self
                         .perform_action(isa, action)
                         .map_err(|error| WastFileError {

@@ -15,7 +15,7 @@ fn main() {
         .expect("error generating test source file");
 
     test_directory(&mut out, "misc_testsuite").expect("generating tests");
-    test_directory(&mut out, "spec_testsuite").expect("generating tests");
+    //test_directory(&mut out, "spec_testsuite").expect("generating tests");
 }
 
 fn test_directory(out: &mut File, testsuite: &str) -> io::Result<()> {

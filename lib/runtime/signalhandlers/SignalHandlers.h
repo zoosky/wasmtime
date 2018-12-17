@@ -41,6 +41,11 @@ EnsureEagerSignalHandlers(void);
 bool
 EnsureDarwinMachPorts(void);
 
+bool CallTrampoline(const void *callee, uint8_t *values_vec, void *vmctx);
+bool Call(const void *callee, void *vmctx);
+
+void SetLastKnownUsableSP(void *p);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

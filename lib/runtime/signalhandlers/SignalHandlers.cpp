@@ -13,8 +13,13 @@
 #include <stdio.h>
 
 #if defined(_WIN32)
-# include <winternl.h>  // must include before util/Windows.h's `#undef`s
-# include "util/Windows.h"
+# include <windows.h>
+# include <winerror.h>
+# include <winnt.h>
+# include <winternl.h>
+# include <mmsystem.h>
+# include <process.h>
+# include <intrin.h>
 #elif defined(USE_APPLE_MACH_PORTS)
 # include <mach/exc.h>
 # include <mach/mach.h>
@@ -341,6 +346,16 @@ struct macos_arm_context {
 #endif
 
 static void
+SetContextSP(CONTEXT* context, const uint8_t* sp)
+{
+#ifdef SP_sig
+    SP_sig(context) = reinterpret_cast<uintptr_t>(sp);
+#else
+    abort();
+#endif
+}
+
+static void
 SetContextPC(CONTEXT* context, const uint8_t* pc)
 {
 #ifdef PC_sig
@@ -355,6 +370,16 @@ ContextToPC(CONTEXT* context)
 {
 #ifdef PC_sig
     return reinterpret_cast<const uint8_t*>(static_cast<uintptr_t>(PC_sig(context)));
+#else
+    abort();
+#endif
+}
+
+static const uint8_t*
+ContextToSP(CONTEXT* context)
+{
+#ifdef SP_sig
+    return reinterpret_cast<const uint8_t*>(static_cast<uintptr_t>(SP_sig(context)));
 #else
     abort();
 #endif
@@ -397,6 +422,23 @@ struct AutoHandlingTrap
 
 }
 
+/// The SP value to restore to before calling Unwind.
+static thread_local void *last_known_usable_sp;
+
+static bool sp_is_aligned(void *sp) {
+#if defined(__x86_64__)
+    return sp == nullptr || ((uintptr_t)sp & 0xf) == 0x8;
+#else
+    return true;
+#endif
+}
+
+/// Set the SP value to restore to before calling Unwind.
+void SetLastKnownUsableSP(void *sp) {
+    assert(sp_is_aligned(sp));
+    last_known_usable_sp = sp;
+}
+
 static
 #if defined(__GNUC__) || defined(__clang__)
 __attribute__ ((warn_unused_result))
@@ -408,22 +450,14 @@ HandleTrap(CONTEXT* context)
 
     RecordTrap(ContextToPC(context));
 
-    // Unwind calls longjmp, so it doesn't run the automatic
-    // sAlreadhHanldingTrap cleanups, so reset it manually before doing
-    // a longjmp.
-    sAlreadyHandlingTrap = false;
+    assert(sp_is_aligned(last_known_usable_sp));
+    assert(last_known_usable_sp != NULL);
+    assert(last_known_usable_sp > ContextToSP(context));
 
-#if defined(USE_APPLE_MACH_PORTS)
-    // Reroute the PC to run the Unwind function on the main stack after the
-    // handler exits. This doesn't yet work for stack overflow traps, because
-    // in that case the main thread doesn't have any space left to run.
+    // Reroute the PC to run the Unwind function, and SP to run it on the
+    // last known good point on the main stack.
     SetContextPC(context, reinterpret_cast<const uint8_t*>(&Unwind));
-#else
-    // For now, just call Unwind directly, rather than redirecting the PC there,
-    // so that it runs on the alternate signal handler stack. To run on the main
-    // stack, reroute the context PC like this:
-    Unwind();
-#endif
+    SetContextSP(context, reinterpret_cast<const uint8_t*>(last_known_usable_sp));
 
     return true;
 }
@@ -815,5 +849,63 @@ EnsureDarwinMachPorts()
     }
 
 #endif
+    return true;
+}
+
+extern "C" void PushJmpBuf(const jmp_buf *, void *);
+
+/// This function just returns the value of its incoming stack pointer.
+/// We'll use this value to set SP when handling a trap occurs, in case
+/// the trap is a stack overflow and we don't have enough stack space to
+/// call longjmp.
+static
+#if defined(_WIN32)
+__declspec(noinline)
+#else
+__attribute__((noinline))
+#endif
+void *get_callee_frame_address(void) {
+#if defined(_WIN32)
+    return _AddressOfReturnAddress();
+#else
+    return (uint8_t *)__builtin_frame_address(0) + sizeof(void*);
+#endif
+}
+
+bool CallTrampoline(const void *callee, uint8_t *values_vec, void *vmctx)
+{
+    // Set a setjmp catch point.
+    jmp_buf buf;
+    if (setjmp(buf) != 0) {
+        return false;
+    }
+
+    /// Capture the outgoing SP for a call at this location.
+    void *sp = get_callee_frame_address();
+    PushJmpBuf(&buf, sp);
+
+    // Call the function!
+    void (*func)(uint8_t *, void *) = (void (*)(uint8_t *, void *)) callee;
+    func(values_vec, vmctx);
+
+    return true;
+}
+
+bool Call(const void *callee, void *vmctx)
+{
+    // Set a setjmp catch point.
+    jmp_buf buf;
+    if (setjmp(buf) != 0) {
+        return false;
+    }
+
+    /// Capture the outgoing SP for a call at this location.
+    void *sp = get_callee_frame_address();
+    PushJmpBuf(&buf, sp);
+
+    // Call the function!
+    void (*func)(void *) = (void (*)(void *)) callee;
+    func(vmctx);
+
     return true;
 }
