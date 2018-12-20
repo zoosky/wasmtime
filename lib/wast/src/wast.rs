@@ -352,6 +352,7 @@ impl WastContext {
                     }
                 }
                 CommandKind::AssertExhaustion { action } => {
+                    // FIXME: Stack overflow handling is not yet implemented on Windows.
                     #[cfg(not(target_os = "windows"))]
                     match self
                         .perform_action(isa, action)

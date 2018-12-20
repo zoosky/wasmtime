@@ -41,9 +41,15 @@ EnsureEagerSignalHandlers(void);
 bool
 EnsureDarwinMachPorts(void);
 
+/// Call the given callee, passing the given argument values, and catch any traps
+/// it raises, returning true if no trap occurred.
 bool CallTrampoline(const void *callee, uint8_t *values_vec, void *vmctx);
+
+/// Call the given callee, passing it the vmctx argument, and catch any traps it
+/// raises, returning true if no trap occurred.
 bool Call(const void *callee, void *vmctx);
 
+/// Record the last known usable stack pointer value.
 void SetLastKnownUsableSP(void *p);
 
 #ifdef __cplusplus

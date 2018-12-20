@@ -45,7 +45,7 @@ banner "Rust debug build"
 
 # Run the tests. We run these in debug mode so that assertions are enabled.
 banner "Rust unit tests"
-RUST_BACKTRACE=1 cargo test -- --nocapture --test-threads=1
+RUST_BACKTRACE=1 cargo test --all -- --nocapture
 
 # Make sure the documentation builds.
 banner "Rust documentation: $topdir/target/doc/wasmtime/index.html"
