@@ -32,12 +32,12 @@ wasm-c-api = []
 
 [dev-dependencies]
 # for wasmtime.rs
-wasi-common = { git = "https://github.com/CraneStation/wasi-common", rev = "8ea7a98"}
+wasi-common = "0.2.0"
 docopt = "1.0.1"
 serde = { "version" = "1.0.94", features = ["derive"] }
 pretty_env_logger = "0.3.0"
 wabt = "0.9.0"
-wasmtime-wast = { path="../wasmtime-wast" }
-wasmtime-wasi = { path="../wasmtime-wasi" }
+wasmtime-wast = { path = "../wasmtime-wast", version = "0.3.0" }
+wasmtime-wasi = { path = "../wasmtime-wasi", version = "0.3.0" }
 rayon = "1.1"
 file-per-thread-logger = "0.1.1"
