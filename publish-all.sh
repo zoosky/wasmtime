@@ -42,15 +42,16 @@ for crate in \
     wasmtime-debug \
     wasmtime-runtime \
     wasmtime-jit \
-    wasmtime-api \
     wasmtime-wast \
     wasmtime-wasi \
     wasmtime-wasi-c \
+    wasmtime-api \
     wasmtime-interface-types \
     wasmtime-obj \
-    wasmtime-py \
-    wasmtime-rust \
-    wasmtime
+    misc/wasmtime-py \
+    misc/wasmtime-rust/macro \
+    misc/wasmtime-rust \
+    .
 do
     echo cargo publish --manifest-path "$crate/Cargo.toml"
 
